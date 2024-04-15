@@ -102,14 +102,15 @@ def is_within_radar(cell_x, cell_y, radar_center, radar_radius):
     # Check if the distance is within the radar radius
     return distance <= radar_radius
 
-def annotate(tb2_radar_state, akinci_radar_state, kizilelma_radar_state):
+def annotate(tb2_radar_state, akinci_radar_state, kizilelma_radar_state, 
+             tb2_radar_point, akinci_radar_point, kizilelma_radar_point):
 
     tb2_found       = "DETECTED" if tb2_radar_state       else "NOT DETECTED"
     akinci_found    = "DETECTED" if akinci_radar_state    else "NOT DETECTED"
     kizilelma_found = "DETECTED" if kizilelma_radar_state else "NOT DETECTED"
 
     font     = pygame.font.Font('freesansbold.ttf', 18)
-    text     = font.render('TB2: ' + tb2_found + " - " + "AKINCI : " + akinci_found + " - " + "KIZILELMA: " + kizilelma_found, True, BLACK, GREENISH)
+    text     = font.render('TB2: ' + tb2_found + " " + str(tb2_radar_point) + " - " + "AKINCI : " + akinci_found + " " + str(akinci_radar_point) +  " - " + "KIZILELMA: " + kizilelma_found + " " + str(kizilelma_radar_point), True, BLACK, GREENISH)
     textRect = text.get_rect()
     textRect.center = (400, 650)
     screen.blit(text, textRect)
@@ -174,6 +175,17 @@ def draw_ally_aircrafts(selection, state):
 
         index += 1
 
+def calc_radar_time(radar_state_prv, radar_state, count):
+    if (radar_state):
+        new_count = count + 1
+    else:
+        new_count = count
+
+    if (radar_state_prv and (not radar_state)):
+        new_count = 0
+
+    return new_count
+
 def main():    
 
     ALLY_POS_PRV  = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
@@ -183,6 +195,15 @@ def main():
     AKINCI_POS    = [AKINCI_INIT_POS[0]    * CELL_SIZE, AKINCI_INIT_POS[1]    * CELL_SIZE, 7]
     TB2_POS       = [TB2_INIT_POS[0]       * CELL_SIZE, TB2_INIT_POS[1]       * CELL_SIZE, 7]
     ALLY_POS      = [KIZILELMA_POS, TB2_POS, AKINCI_POS]
+
+    tb2_in_radar_prv       = False
+    akinci_in_radar_prv    = False
+    kizilelma_in_radar_prv = False
+
+    tb2_radar_time       = 0
+    akinci_radar_time    = 0
+    kizilelma_radar_time = 0
+
     clock = pygame.time.Clock()
 
     while True:
@@ -259,17 +280,29 @@ def main():
         for i in AC_TYPES:
             draw_ally_aircrafts(i, ALLY_POS)
 
+        tb2_radar_time_new       = calc_radar_time(tb2_in_radar_prv      , tb2_in_radar      , tb2_radar_time      ) 
+        akinci_radar_time_new    = calc_radar_time(akinci_in_radar_prv   , akinci_in_radar   , akinci_radar_time   ) 
+        kizilelma_radar_time_new = calc_radar_time(kizilelma_in_radar_prv, kizilelma_in_radar, kizilelma_radar_time) 
+
+        tb2_radar_time       = tb2_radar_time_new
+        akinci_radar_time    = akinci_radar_time_new
+        kizilelma_radar_time = kizilelma_radar_time_new
+
 
         #KIZILELMA_POS[1] -= 1
-        annotate(tb2_in_radar, akinci_in_radar, kizilelma_in_radar)
+        annotate(tb2_in_radar, akinci_in_radar, kizilelma_in_radar, 
+                 tb2_radar_time_new, akinci_radar_time_new, kizilelma_radar_time_new)
         pygame.display.flip()
-        clock.tick(60)
+        clock.tick(30)
 
         ALLY_POS_PRV = [[ALLY_POS[0][0], ALLY_POS[0][1], ALLY_POS[0][2]], [ALLY_POS[1][0], ALLY_POS[1][1], ALLY_POS[1][2]],
                         [ALLY_POS[2][0], ALLY_POS[2][1], ALLY_POS[2][2]]]
         
-        
-    
+        tb2_in_radar_prv       = tb2_radar_time_new
+        akinci_in_radar_prv    = akinci_radar_time_new
+        kizilelma_in_radar_prv = kizilelma_radar_time_new
+
+               
 
 if __name__ == '__main__':
     main()
