@@ -1,2 +1,2 @@
 # 3 Aircraft Formation Flight
-![Image of the Environment](https://github.com/kucar17/RRT-Path-Planning-Algorithm/blob/master/sample.png?raw=true)
+![Image of the Environment](https://github.com/kucar17/formationg-flight/blob/master/sample.png?raw=true)
