@@ -6,16 +6,13 @@ TB2       = 0
 AKINCI    = 1
 KIZILELMA = 2
 
-##global kizilelma
-##global akinci
-##global tb2
-
 # Initialize Pygame
 pygame.init()
 
 # Screen dimensions
 SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT + 100))
+pygame.display.set_caption('Formation Flight')
 
 # Grid settings
 CELL_SIZE = 20
@@ -81,6 +78,41 @@ AIRCRAFTS_SURFACE = [kizilelma, tb2, akinci]
 KIZILELMA_INIT_POS = [35, 25]
 AKINCI_INIT_POS    = [31, 25]
 TB2_INIT_POS       = [37, 23]
+
+def is_within_radar(cell_x, cell_y, radar_center, radar_radius):
+    """
+    Check if the given grid cell is within the radar area.
+    
+    Args:
+    cell_x (int): The x-coordinate of the cell.
+    cell_y (int): The y-coordinate of the cell.
+    radar_center (tuple): A tuple (x, y) representing the center of the radar circle.
+    radar_radius (int): The radius of the radar circle.
+
+    Returns:
+    bool: True if the cell is within the radar, False otherwise.
+    """
+    # Calculate the center of the grid cell
+    cell_center_x = cell_x + CELL_SIZE / 2
+    cell_center_y = cell_y + CELL_SIZE / 2
+    
+    # Calculate distance from the center of the radar to the center of the cell
+    distance = math.sqrt((radar_center[0] - cell_center_x) ** 2 + (radar_center[1] - cell_center_y) ** 2)
+    
+    # Check if the distance is within the radar radius
+    return distance <= radar_radius
+
+def annotate(tb2_radar_state, akinci_radar_state, kizilelma_radar_state):
+
+    tb2_found       = "DETECTED" if tb2_radar_state       else "NOT DETECTED"
+    akinci_found    = "DETECTED" if akinci_radar_state    else "NOT DETECTED"
+    kizilelma_found = "DETECTED" if kizilelma_radar_state else "NOT DETECTED"
+
+    font     = pygame.font.Font('freesansbold.ttf', 18)
+    text     = font.render('TB2: ' + tb2_found + " - " + "AKINCI : " + akinci_found + " - " + "KIZILELMA: " + kizilelma_found, True, BLACK, GREENISH)
+    textRect = text.get_rect()
+    textRect.center = (400, 650)
+    screen.blit(text, textRect)
 
 def draw_grid():
     for x in range(0, SCREEN_WIDTH, CELL_SIZE):
@@ -220,17 +252,24 @@ def main():
 
         ALLY_POS          = [KIZILELMA_POS, TB2_POS, AKINCI_POS]   
 
+        tb2_in_radar       = is_within_radar(TB2_POS[0]      , TB2_POS[1]      , RADAR_CENTER, RADAR_RADIUS)
+        akinci_in_radar    = is_within_radar(AKINCI_POS[0]   , AKINCI_POS[1]   , RADAR_CENTER, RADAR_RADIUS)
+        kizilelma_in_radar = is_within_radar(KIZILELMA_POS[0], KIZILELMA_POS[1], RADAR_CENTER, RADAR_RADIUS)
+
         for i in AC_TYPES:
             draw_ally_aircrafts(i, ALLY_POS)
 
 
         #KIZILELMA_POS[1] -= 1
-
+        annotate(tb2_in_radar, akinci_in_radar, kizilelma_in_radar)
         pygame.display.flip()
         clock.tick(60)
 
         ALLY_POS_PRV = [[ALLY_POS[0][0], ALLY_POS[0][1], ALLY_POS[0][2]], [ALLY_POS[1][0], ALLY_POS[1][1], ALLY_POS[1][2]],
                         [ALLY_POS[2][0], ALLY_POS[2][1], ALLY_POS[2][2]]]
+        
+        
+    
 
 if __name__ == '__main__':
     main()
