@@ -79,6 +79,9 @@ KIZILELMA_INIT_POS = [35, 25]
 AKINCI_INIT_POS    = [31, 25]
 TB2_INIT_POS       = [37, 23]
 
+def check_mountain_collision(cell_x, cell_y, mountain):
+    return [cell_x, cell_y] in mountain
+
 def is_within_radar(cell_x, cell_y, radar_center, radar_radius):
     """
     Check if the given grid cell is within the radar area.
@@ -103,17 +106,27 @@ def is_within_radar(cell_x, cell_y, radar_center, radar_radius):
     return distance <= radar_radius
 
 def annotate(tb2_radar_state, akinci_radar_state, kizilelma_radar_state, 
-             tb2_radar_point, akinci_radar_point, kizilelma_radar_point):
+             tb2_radar_point, akinci_radar_point, kizilelma_radar_point,
+             tb2_mountain   , akinci_mountain   , kizilelma_mountain):
 
     tb2_found       = "DETECTED" if tb2_radar_state       else "NOT DETECTED"
     akinci_found    = "DETECTED" if akinci_radar_state    else "NOT DETECTED"
     kizilelma_found = "DETECTED" if kizilelma_radar_state else "NOT DETECTED"
+
+    tb2_collision       = "COLLISION" if tb2_mountain       else "NO COLLISION"
+    akinci_collision    = "COLLISION" if akinci_mountain    else "NO COLLISION"
+    kizilelma_collision = "COLLISION" if kizilelma_mountain else "NO COLLISION"
 
     font     = pygame.font.Font('freesansbold.ttf', 18)
     text     = font.render('TB2: ' + tb2_found + " " + str(tb2_radar_point) + " - " + "AKINCI : " + akinci_found + " " + str(akinci_radar_point) +  " - " + "KIZILELMA: " + kizilelma_found + " " + str(kizilelma_radar_point), True, BLACK, GREENISH)
     textRect = text.get_rect()
     textRect.center = (400, 650)
     screen.blit(text, textRect)
+
+    text2     = font.render('TB2: ' + tb2_collision + " - " + "AKINCI : " + akinci_collision + " - " + "KIZILELMA: " + kizilelma_collision, True, BLACK, GREENISH)
+    textRect2 = text2.get_rect()
+    textRect2.center = (400, 680)
+    screen.blit(text2, textRect2)
 
 def draw_grid():
     for x in range(0, SCREEN_WIDTH, CELL_SIZE):
@@ -288,10 +301,15 @@ def main():
         akinci_radar_time    = akinci_radar_time_new
         kizilelma_radar_time = kizilelma_radar_time_new
 
+        tb2_mountain_collide       = check_mountain_collision(TB2_POS[0]      , TB2_POS[1]      , MOUNTAINS)
+        akinci_mountain_collide    = check_mountain_collision(AKINCI_POS[0]   , AKINCI_POS[1]   , MOUNTAINS)
+        kizilelma_mountain_collide = check_mountain_collision(KIZILELMA_POS[0], KIZILELMA_POS[1], MOUNTAINS)
+
 
         #KIZILELMA_POS[1] -= 1
         annotate(tb2_in_radar, akinci_in_radar, kizilelma_in_radar, 
-                 tb2_radar_time_new, akinci_radar_time_new, kizilelma_radar_time_new)
+                 tb2_radar_time_new, akinci_radar_time_new, kizilelma_radar_time_new,
+                 tb2_mountain_collide, akinci_mountain_collide, kizilelma_mountain_collide)
         pygame.display.flip()
         clock.tick(30)
 
