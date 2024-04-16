@@ -120,12 +120,12 @@ def annotate(tb2_radar_state, akinci_radar_state, kizilelma_radar_state,
     font     = pygame.font.Font('freesansbold.ttf', 18)
     text     = font.render('TB2: ' + tb2_found + " " + str(tb2_radar_point) + " - " + "AKINCI : " + akinci_found + " " + str(akinci_radar_point) +  " - " + "KIZILELMA: " + kizilelma_found + " " + str(kizilelma_radar_point), True, BLACK, GREENISH)
     textRect = text.get_rect()
-    textRect.center = (400, 650)
+    textRect.center = (400, 630)
     screen.blit(text, textRect)
 
     text2     = font.render('TB2: ' + tb2_collision + " - " + "AKINCI : " + akinci_collision + " - " + "KIZILELMA: " + kizilelma_collision, True, BLACK, GREENISH)
     textRect2 = text2.get_rect()
-    textRect2.center = (400, 680)
+    textRect2.center = (400, 670)
     screen.blit(text2, textRect2)
 
 def draw_grid():
