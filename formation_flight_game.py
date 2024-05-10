@@ -108,6 +108,13 @@ class FormationFlightGame:
         self.AKINCI_INIT_POS = [31, 25]
         self.TB2_INIT_POS = [37, 23]
 
+        self.tb2_in_radar = 0
+        self.akinci_in_radar = 0
+        self.kizilelma_in_radar = 0
+        self.tb2_mountain_collide = 0
+        self.akinci_mountain_collide = 0
+        self.kizilelma_mountain_collide = 0
+
     def check_mountain_collision(self, cell_x, cell_y, mountain):
         return [cell_x, cell_y] in mountain
 
@@ -310,41 +317,41 @@ class FormationFlightGame:
 
         self.clock = pygame.time.Clock()
 
-        self.screen.fill(self.GREENISH)
+        # self.screen.fill(self.GREENISH)
 
-        self.draw_grid()
-        self.draw_circle_area(self.RADAR_CENTER, self.RADAR_RADIUS, self.ORANGE)
-        self.draw_circle_area(self.ENEMY_CENTER, self.ENEMY_RADIUS, self.DARK_RED)
-        self.draw_circle_area(self.ALLY_CENTER, self.ALLY_RADIUS, self.BLUE)
-        self.draw_mountains()
-        self.draw_enemy_aircrafts()
+        # self.draw_grid()
+        # self.draw_circle_area(self.RADAR_CENTER, self.RADAR_RADIUS, self.ORANGE)
+        # self.draw_circle_area(self.ENEMY_CENTER, self.ENEMY_RADIUS, self.DARK_RED)
+        # self.draw_circle_area(self.ALLY_CENTER, self.ALLY_RADIUS, self.BLUE)
+        # self.draw_mountains()
+        # self.draw_enemy_aircrafts()
 
     def game_step(self, action):
-        self.screen.fill(self.GREENISH)
+        # self.screen.fill(self.GREENISH)
 
-        self.draw_grid()
-        self.draw_circle_area(self.RADAR_CENTER, self.RADAR_RADIUS, self.ORANGE)
-        self.draw_circle_area(self.ENEMY_CENTER, self.ENEMY_RADIUS, self.DARK_RED)
-        self.draw_circle_area(self.ALLY_CENTER, self.ALLY_RADIUS, self.BLUE)
-        self.draw_mountains()
-        self.draw_enemy_aircrafts()
+        # self.draw_grid()
+        # self.draw_circle_area(self.RADAR_CENTER, self.RADAR_RADIUS, self.ORANGE)
+        # self.draw_circle_area(self.ENEMY_CENTER, self.ENEMY_RADIUS, self.DARK_RED)
+        # self.draw_circle_area(self.ALLY_CENTER, self.ALLY_RADIUS, self.BLUE)
+        # self.draw_mountains()
+        # self.draw_enemy_aircrafts()
 
         ## NEW X-Y POSITION ASSIGNMENT
         self.KIZILELMA_POS[0] = (
-            self.KIZILELMA_POS[0] - 1 if self.KIZILELMA_POS[0] - 1 >= 0 else 0
+            self.KIZILELMA_POS[0] - abs(action[0]) if self.KIZILELMA_POS[0] - 1 >= 0 else 0
         )
         self.KIZILELMA_POS[1] = (
-            self.KIZILELMA_POS[1] - 1 if self.KIZILELMA_POS[1] - 1 >= 0 else 0
+            self.KIZILELMA_POS[1] - abs(action[1]) if self.KIZILELMA_POS[1] - 1 >= 0 else 0
         )
 
-        self.TB2_POS[0] = self.TB2_POS[0] - 1 if self.TB2_POS[0] - 1 >= 0 else 0
-        self.TB2_POS[1] = self.TB2_POS[1] - 1 if self.TB2_POS[1] - 1 >= 0 else 0
+        self.TB2_POS[0] = self.TB2_POS[0] - abs(action[2]) if self.TB2_POS[0] - 1 >= 0 else 0
+        self.TB2_POS[1] = self.TB2_POS[1] - abs(action[3]) if self.TB2_POS[1] - 1 >= 0 else 0
 
         self.AKINCI_POS[0] = (
-            self.AKINCI_POS[0] - 1 if self.AKINCI_POS[0] - 1 >= 0 else 0
+            self.AKINCI_POS[0] - abs(action[4]) if self.AKINCI_POS[0] - 1 >= 0 else 0
         )
         self.AKINCI_POS[1] = (
-            self.AKINCI_POS[1] - 1 if self.AKINCI_POS[1] - 1 >= 0 else 0
+            self.AKINCI_POS[1] - abs(action[5]) if self.AKINCI_POS[1] - 1 >= 0 else 0
         )
 
         self.ALLY_POS = [self.KIZILELMA_POS, self.TB2_POS, self.AKINCI_POS]
@@ -417,8 +424,8 @@ class FormationFlightGame:
             self.RADAR_RADIUS,
         )
 
-        for i in self.AC_TYPES:
-            self.draw_ally_aircrafts(i, self.ALLY_POS)
+        # for i in self.AC_TYPES:
+        #     self.draw_ally_aircrafts(i, self.ALLY_POS)
 
         self.tb2_radar_time_new = self.calc_radar_time(
             self.tb2_in_radar_prv, self.tb2_in_radar, self.tb2_radar_time
@@ -446,18 +453,18 @@ class FormationFlightGame:
             self.KIZILELMA_POS[0], self.KIZILELMA_POS[1], self.MOUNTAINS
         )
 
-        self.annotate(
-            self.tb2_in_radar,
-            self.akinci_in_radar,
-            self.kizilelma_in_radar,
-            self.tb2_radar_time_new,
-            self.akinci_radar_time_new,
-            self.kizilelma_radar_time_new,
-            self.tb2_mountain_collide,
-            self.akinci_mountain_collide,
-            self.kizilelma_mountain_collide,
-        )
-        pygame.display.flip()
+        # self.annotate(
+        #     self.tb2_in_radar,
+        #     self.akinci_in_radar,
+        #     self.kizilelma_in_radar,
+        #     self.tb2_radar_time_new,
+        #     self.akinci_radar_time_new,
+        #     self.kizilelma_radar_time_new,
+        #     self.tb2_mountain_collide,
+        #     self.akinci_mountain_collide,
+        #     self.kizilelma_mountain_collide,
+        # )
+        # pygame.display.flip()
         self.clock.tick(30)
 
         self.ALLY_POS_PRV = [

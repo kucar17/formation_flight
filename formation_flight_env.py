@@ -1,10 +1,12 @@
 import gym
-from GAME_4 import *
+from formation_flight_game import *
 import numpy as np
+from gym import spaces
 
 class FormationFlightEnv(gym.Env):
     def __init__(self):
         self.game = FormationFlightGame()
+        self.action_space = spaces.MultiDiscrete([2, 2, 2, 2, 2, 2])
 
     def _get_obs(self):
         pos = np.array(self.game.ALLY_POS).flatten()
@@ -17,13 +19,19 @@ class FormationFlightEnv(gym.Env):
     def reset(self):
         self.game.init()
 
-    def step(self, action):
-        self.game.game_step(action)
         obs = self._get_obs()
 
-        reward, done = self.reward(obs)
+        return obs
 
-        return reward, done
+    def step(self, action):
+        self.game.game_step(action)
+        next_obs = self._get_obs()
+
+        reward, done = self.reward(next_obs)
+
+        info = None
+
+        return next_obs, reward, done, info
 
     def reward(self, obs):
         done = False
