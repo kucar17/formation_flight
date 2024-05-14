@@ -21,7 +21,7 @@ class FormationFlightEnv(gym.Env):
                     self.game.KIZILELMA_POS[1],
                 ]
             ).flatten()
-            / 700
+            / 1000
         )
 
         bools = np.array(
@@ -58,9 +58,9 @@ class FormationFlightEnv(gym.Env):
         done = False
 
         # Extract positions
-        tb2_pos_x, tb2_pos_y = obs[0] * 700, obs[1] * 700
-        akn_pos_x, akn_pos_y = obs[2] * 700, obs[3] * 700
-        kzl_pos_x, kzl_pos_y = obs[4] * 700, obs[5] * 700
+        tb2_pos_x, tb2_pos_y = obs[0] * 1000, obs[1] * 1000
+        akn_pos_x, akn_pos_y = obs[2] * 1000, obs[3] * 1000
+        kzl_pos_x, kzl_pos_y = obs[4] * 1000, obs[5] * 1000
 
         # Check collisions
         collision_penalty = sum(obs[6:9])

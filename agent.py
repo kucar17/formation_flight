@@ -7,22 +7,23 @@ from networks import Critic, Actor
 import numpy as np
 
 
+import torch
+import torch.optim as optim
+import torch.nn.functional as F
+import torch.nn as nn
+from torch.nn.utils import clip_grad_norm_
+from networks import Critic, Actor
+import numpy as np
+
+
 class SAC(nn.Module):
     """Interacts with and learns from the environment."""
 
     def __init__(self, state_size, action_size, device):
-        """Initialize an Agent object.
-
-        Params
-        ======
-            state_size (int): dimension of each state
-            action_size (int): dimension of each action
-            random_seed (int): random seed
-        """
+        """Initialize an Agent object."""
         super(SAC, self).__init__()
         self.state_size = state_size
         self.action_size = action_size
-
         self.device = device
 
         self.gamma = 0.99
@@ -32,11 +33,14 @@ class SAC(nn.Module):
         self.clip_grad_param = 1
 
         self.alpha = 0.2  # Example static initialization
-
-        self.target_entropy = -action_size  # Typical heuristic is negative action dimension
+        self.target_entropy = (
+            -action_size
+        )  # Typical heuristic is negative action dimension
         self.log_alpha = torch.tensor(np.log(self.alpha)).to(device)
         self.log_alpha.requires_grad = True  # Allows optimization
-        self.alpha_optimizer = torch.optim.Adam([self.log_alpha], lr=learning_rate)  # separate optimizer for alpha
+        self.alpha_optimizer = torch.optim.Adam(
+            [self.log_alpha], lr=learning_rate
+        )  # Separate optimizer for alpha
 
         # Actor Network
         self.actor_local = Actor(state_size, action_size, hidden_size).to(device)
@@ -45,10 +49,8 @@ class SAC(nn.Module):
         )
 
         # Critic Network (w/ Target Network)
-
         self.critic1 = Critic(state_size, action_size, hidden_size, 2).to(device)
         self.critic2 = Critic(state_size, action_size, hidden_size, 1).to(device)
-
         assert self.critic1.parameters() != self.critic2.parameters()
 
         self.critic1_target = Critic(state_size, action_size, hidden_size).to(device)
@@ -60,12 +62,25 @@ class SAC(nn.Module):
         self.critic1_optimizer = optim.Adam(self.critic1.parameters(), lr=learning_rate)
         self.critic2_optimizer = optim.Adam(self.critic2.parameters(), lr=learning_rate)
 
-    def get_action(self, state):
+    def get_action(self, state, add_noise=True, noise_scale=0.1):
         """Returns actions for given state as per current policy."""
         state = torch.from_numpy(state).float().to(self.device)
         with torch.no_grad():
-            action = self.actor_local.get_det_action(state)
-        return action[0]
+            action_logits = self.actor_local.forward(state)
+            action_probs = F.softmax(action_logits, dim=-1)
+            if add_noise:
+                noise = torch.randn_like(action_probs) * noise_scale
+                action_probs = action_probs + noise
+                action_probs = F.softmax(action_probs, dim=-1)  # Re-normalize
+            if action_probs.dim() == 3:
+                action_probs = action_probs.view(
+                    -1, 3
+                )  # Flatten to (batch_size*action_size, 3)
+            actions = torch.multinomial(action_probs, num_samples=1, replacement=True)
+            actions = (
+                actions.view(-1, 6) - 1
+            )  # Reshape to (batch_size, action_size) and adjust to [-1, 0, 1]
+        return actions[0].cpu().numpy()
 
     def calc_policy_loss(self, states, alpha):
         _, action_probs, log_pis = self.actor_local.evaluate(states)
@@ -78,21 +93,9 @@ class SAC(nn.Module):
         return actor_loss, log_action_pi
 
     def learn(self, step, experiences, gamma, d=1):
-        """Updates actor, critics and entropy_alpha parameters using given batch of experience tuples.
-        Q_targets = r + γ * (min_critic_target(next_state, actor_target(next_state)) - α *log_pi(next_action|next_state))
-        Critic_loss = MSE(Q, Q_target)
-        Actor_loss = α * log_pi(a|s) - Q(s,a)
-        where:
-            actor_target(state) -> action
-            critic_target(state, action) -> Q-value
-        Params
-        ======
-            experiences (Tuple[torch.Tensor]): tuple of (s, a, r, s', done) tuples
-            gamma (float): discount factor
-        """
+        """Updates actor, critics and entropy_alpha parameters using given batch of experience tuples."""
         states, actions, rewards, next_states, dones = experiences
 
-        # Convert tensors to the correct device
         states, next_states, actions, rewards, dones = (
             states.to(self.device),
             next_states.to(self.device),
@@ -101,11 +104,9 @@ class SAC(nn.Module):
             dones.to(self.device),
         )
 
-        # Actions should be long if they are used as indices
         actions = actions.long()
 
         # ---------------------------- Update Critic ---------------------------- #
-        # Get predicted Q-values from target models
         with torch.no_grad():
             next_action_logits = self.actor_local(next_states)
             next_action_probs = F.softmax(next_action_logits, dim=-1)
@@ -124,7 +125,6 @@ class SAC(nn.Module):
         critic1_loss = F.mse_loss(Q_expected1, Q_targets)
         critic2_loss = F.mse_loss(Q_expected2, Q_targets)
 
-        # ---------------------------- Update Critic ---------------------------- #
         self.critic1_optimizer.zero_grad()
         critic1_loss.backward()
         self.critic1_optimizer.step()
@@ -144,7 +144,8 @@ class SAC(nn.Module):
 
         current_alpha = self.log_alpha.exp()
         actor_loss = -(
-            self.critic1(states, actions.float()).mean() - current_alpha * entropy.mean()
+            self.critic1(states, actions.float()).mean()
+            - current_alpha * entropy.mean()
         )
 
         self.actor_optimizer.zero_grad()
@@ -166,14 +167,7 @@ class SAC(nn.Module):
         return actor_loss.item(), critic1_loss.item(), critic2_loss.item()
 
     def soft_update(self, local_model, target_model):
-        """Soft update model parameters.
-        θ_target = τ*θ_local + (1 - τ)*θ_target
-        Params
-        ======
-            local_model: PyTorch model (weights will be copied from)
-            target_model: PyTorch model (weights will be copied to)
-            tau (float): interpolation parameter
-        """
+        """Soft update model parameters."""
         for target_param, local_param in zip(
             target_model.parameters(), local_model.parameters()
         ):

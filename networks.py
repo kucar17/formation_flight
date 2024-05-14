@@ -30,6 +30,12 @@ class Actor(nn.Module):
         self.fc2 = nn.Linear(hidden_size, hidden_size)
         # Output logits for each of the 3 possible actions in each of the 6 dimensions
         self.action_head = nn.Linear(hidden_size, action_size * 3)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        self.fc1.weight.data.uniform_(*hidden_init(self.fc1))
+        self.fc2.weight.data.uniform_(*hidden_init(self.fc2))
+        self.action_head.weight.data.uniform_(-3e-3, 3e-3)
 
     def forward(self, state):
         x = F.relu(self.fc1(state))
@@ -39,13 +45,22 @@ class Actor(nn.Module):
         return action_logits.view(-1, 6, 3)
 
     def evaluate(self, state, epsilon=1e-6):
-        action_logits = self.forward(state)
-        dists = [Categorical(logits=logits) for logits in action_logits.transpose(0, 1)]
-        actions = torch.stack([dist.sample() for dist in dists], dim=1)
-        log_probs = torch.stack(
-            [dist.log_prob(action) for dist, action in zip(dists, actions.T)], dim=1
-        )
-        return actions, log_probs.sum(dim=1)  # Sum log probabilities across actions
+            action_logits = self.forward(state)
+            action_probs = F.softmax(action_logits, dim=-1)
+
+            if action_probs.dim() == 3:
+                action_probs = action_probs.view(-1, 3)  # Flatten to (batch_size*action_size, 3)
+
+            dists = [Categorical(probs=probs) for probs in action_probs]
+            actions = torch.stack([dist.sample() for dist in dists], dim=1)
+            log_probs = torch.stack(
+                [dist.log_prob(action) for dist, action in zip(dists, actions.T)], dim=1
+            )
+
+            actions = actions.view(-1, 6) - 1  # Adjust shape and indices
+            log_probs = log_probs.view(-1, 6)
+
+            return actions, log_probs.sum(dim=1)  # Sum log probabilities across actions
 
     def get_action(self, state):
         """
@@ -61,17 +76,26 @@ class Actor(nn.Module):
         actions = actions.squeeze(-1) - 1
         return actions
 
-    def get_det_action(self, state):
-        with torch.no_grad():
-            action_logits = self.forward(state)
-            # print("Action logits:", action_logits)
-            action_probs = F.softmax(action_logits, dim=-1)  # Convert logits to probabilities
-            # print("Action probabilities:", action_probs)
-            action_indices = torch.argmax(action_probs, dim=-1)  # Highest probability index
-            # print("Action indices before mapping:", action_indices)
-            actions = action_indices - 1  # Map indices: [0, 1, 2] -> [-1, 0, 1]
-            # print("Actions after mapping:", actions)
-        return actions.cpu().numpy()
+    def get_det_action(self, state, add_noise=True, noise_scale=0.1):
+        action_logits = self.forward(state)
+        action_probs = F.softmax(action_logits, dim=-1)
+        
+        if add_noise:
+            noise = torch.randn_like(action_probs) * noise_scale
+            action_probs = action_probs + noise
+            action_probs = F.softmax(action_probs, dim=-1)  # Re-normalize
+
+        # Ensure action_probs is 2D with shape (batch_size, action_size*3)
+        if action_probs.dim() == 3:
+            action_probs = action_probs.view(-1, 3)  # Flatten to (batch_size*action_size, 3)
+
+        actions = torch.multinomial(action_probs, num_samples=1, replacement=True)
+        actions = actions.view(-1, 6) - 1  # Reshape to (batch_size, action_size) and adjust to [-1, 0, 1]
+
+        print(f"Action probabilities: {action_probs}")
+        print(f"Selected actions: {actions}")
+
+        return actions
 
 
 class Critic(nn.Module):
@@ -102,12 +126,13 @@ class Critic(nn.Module):
 
     def forward(self, state, action):
         """Build a critic (value) network that maps (state, action) pairs -> Q-values."""
-        # Ensure action is in the correct shape [batch_size, action_size]
         if action.dim() == 1:
-            action = action.squeeze(-1)  # Adds a dimension at the end if it's 1D
+            action = action.unsqueeze(-1)  # Adds a dimension at the end if it's 1D
 
-        # Now let's concatenate along dimension 1 (features dimension)
-        x = torch.cat((state, action), dim=1)
+        if state.dim() == 1:
+            state = state.unsqueeze(0)  # Adds a dimension at the beginning if it's 1D
+
+        x = torch.cat((state, action), dim=-1)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         q_value = self.q_out(x)

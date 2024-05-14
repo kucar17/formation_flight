@@ -4,21 +4,18 @@ import torch
 import wandb
 import argparse
 from buffer import ReplayBuffer
-import glob
 from utils import save, collect_random
-import random
 from agent import SAC
 from formation_flight_env import FormationFlightEnv
 
 def get_config():
-    env = FormationFlightEnv()
     parser = argparse.ArgumentParser(description="RL")
     parser.add_argument("--run_name", type=str, default="SAC", help="Run name, default: SAC")
     parser.add_argument("--episodes", type=int, default=1_000_000_000, help="Number of episodes, default: 100")
     parser.add_argument("--steps", type=int, default=1_000, help="Number of steps, default: 1000")
-    parser.add_argument("--exploration", type=int, default=10000, help="Number of exploration episodes, default: 1000")
-    parser.add_argument("--buffer_size", type=int, default=100_000, help="Maximal training dataset size, default: 100_000")
-    parser.add_argument("--seed", type=int, default=1, help="Seed, default: 1")
+    parser.add_argument("--exploration", type=int, default=1_000, help="Number of exploration episodes, default: 1000")
+    parser.add_argument("--buffer_size", type=int, default=150_000, help="Maximal training dataset size, default: 100_000")
+    parser.add_argument("--seed", type=int, default=1256, help="Seed, default: 1")
     parser.add_argument("--save_every", type=int, default=25, help="Saves the network every x epochs, default: 25")
     parser.add_argument("--batch_size", type=int, default=8, help="Batch size, default: 256")
 
@@ -30,10 +27,10 @@ def train(config):
     env = FormationFlightEnv()
 
     # Seeds
-    np.random.seed(config.seed)
-    random.seed(config.seed)
-    torch.manual_seed(config.seed)
-    env.action_space.seed(config.seed)
+    # np.random.seed(config.seed)
+    # random.seed(config.seed)
+    # torch.manual_seed(config.seed)
+    # env.action_space.seed(config.seed)
 
     # Device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -93,7 +90,7 @@ def train(config):
 
             # Saving agent
             if i % config.save_every == 0:
-                save(config, save_name="SAC_discrete", model=agent.actor_local, wandb=wandb, ep=0)
+                save(config, save_name="SAC_discrete", model=agent.actor_local, ep=i)
 
 if __name__ == "__main__":
     config = get_config()
