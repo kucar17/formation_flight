@@ -1,6 +1,7 @@
 import pygame
 import math
 
+
 class FormationFlightGame:
     def __init__(self):
         self.TB2 = 0
@@ -8,7 +9,12 @@ class FormationFlightGame:
         self.KIZILELMA = 2
 
         # Initialize Pygame
-        pygame.init()
+        # pygame.init()
+        # pygame.quit()
+        # pygame.display.quit()
+
+        # Render
+        self.render = False
 
         # Screen dimensions
         self.SCREEN_WIDTH, self.SCREEN_HEIGHT = 800, 600
@@ -317,41 +323,58 @@ class FormationFlightGame:
 
         self.clock = pygame.time.Clock()
 
-        # self.screen.fill(self.GREENISH)
+        if self.render:
+            self.screen.fill(self.GREENISH)
 
-        # self.draw_grid()
-        # self.draw_circle_area(self.RADAR_CENTER, self.RADAR_RADIUS, self.ORANGE)
-        # self.draw_circle_area(self.ENEMY_CENTER, self.ENEMY_RADIUS, self.DARK_RED)
-        # self.draw_circle_area(self.ALLY_CENTER, self.ALLY_RADIUS, self.BLUE)
-        # self.draw_mountains()
-        # self.draw_enemy_aircrafts()
+            self.draw_grid()
+            self.draw_circle_area(self.RADAR_CENTER, self.RADAR_RADIUS, self.ORANGE)
+            self.draw_circle_area(self.ENEMY_CENTER, self.ENEMY_RADIUS, self.DARK_RED)
+            self.draw_circle_area(self.ALLY_CENTER, self.ALLY_RADIUS, self.BLUE)
+            self.draw_mountains()
+            self.draw_enemy_aircrafts()
 
     def game_step(self, action):
-        # self.screen.fill(self.GREENISH)
+        if self.render:
+            self.screen.fill(self.GREENISH)
 
-        # self.draw_grid()
-        # self.draw_circle_area(self.RADAR_CENTER, self.RADAR_RADIUS, self.ORANGE)
-        # self.draw_circle_area(self.ENEMY_CENTER, self.ENEMY_RADIUS, self.DARK_RED)
-        # self.draw_circle_area(self.ALLY_CENTER, self.ALLY_RADIUS, self.BLUE)
-        # self.draw_mountains()
-        # self.draw_enemy_aircrafts()
+            self.draw_grid()
+            self.draw_circle_area(self.RADAR_CENTER, self.RADAR_RADIUS, self.ORANGE)
+            self.draw_circle_area(self.ENEMY_CENTER, self.ENEMY_RADIUS, self.DARK_RED)
+            self.draw_circle_area(self.ALLY_CENTER, self.ALLY_RADIUS, self.BLUE)
+            self.draw_mountains()
+            self.draw_enemy_aircrafts()
 
         ## NEW X-Y POSITION ASSIGNMENT
-        self.KIZILELMA_POS[0] = (
-            self.KIZILELMA_POS[0] - abs(action[0]) if self.KIZILELMA_POS[0] - 1 >= 0 else 0
+        self.KIZILELMA_POS[0] -= action[0]  # Move x
+        self.KIZILELMA_POS[1] -= action[1]  # Move y
+
+        self.TB2_POS[0] -= action[2]
+        self.TB2_POS[1] -= action[3]
+
+        self.AKINCI_POS[0] -= action[4]
+        self.AKINCI_POS[1] -= action[5]
+
+        # Ensure that aircraft positions do not move outside of the boundaries
+        # This checks and corrects any out-of-bounds movement
+        self.KIZILELMA_POS[0] = max(
+            0, min(self.KIZILELMA_POS[0], self.SCREEN_WIDTH - self.CELL_SIZE)
         )
-        self.KIZILELMA_POS[1] = (
-            self.KIZILELMA_POS[1] - abs(action[1]) if self.KIZILELMA_POS[1] - 1 >= 0 else 0
+        self.KIZILELMA_POS[1] = max(
+            0, min(self.KIZILELMA_POS[1], self.SCREEN_HEIGHT - self.CELL_SIZE)
         )
 
-        self.TB2_POS[0] = self.TB2_POS[0] - abs(action[2]) if self.TB2_POS[0] - 1 >= 0 else 0
-        self.TB2_POS[1] = self.TB2_POS[1] - abs(action[3]) if self.TB2_POS[1] - 1 >= 0 else 0
-
-        self.AKINCI_POS[0] = (
-            self.AKINCI_POS[0] - abs(action[4]) if self.AKINCI_POS[0] - 1 >= 0 else 0
+        self.TB2_POS[0] = max(
+            0, min(self.TB2_POS[0], self.SCREEN_WIDTH - self.CELL_SIZE)
         )
-        self.AKINCI_POS[1] = (
-            self.AKINCI_POS[1] - abs(action[5]) if self.AKINCI_POS[1] - 1 >= 0 else 0
+        self.TB2_POS[1] = max(
+            0, min(self.TB2_POS[1], self.SCREEN_HEIGHT - self.CELL_SIZE)
+        )
+
+        self.AKINCI_POS[0] = max(
+            0, min(self.AKINCI_POS[0], self.SCREEN_WIDTH - self.CELL_SIZE)
+        )
+        self.AKINCI_POS[1] = max(
+            0, min(self.AKINCI_POS[1], self.SCREEN_HEIGHT - self.CELL_SIZE)
         )
 
         self.ALLY_POS = [self.KIZILELMA_POS, self.TB2_POS, self.AKINCI_POS]
@@ -424,8 +447,9 @@ class FormationFlightGame:
             self.RADAR_RADIUS,
         )
 
-        # for i in self.AC_TYPES:
-        #     self.draw_ally_aircrafts(i, self.ALLY_POS)
+        if self.render:
+            for i in self.AC_TYPES:
+                self.draw_ally_aircrafts(i, self.ALLY_POS)
 
         self.tb2_radar_time_new = self.calc_radar_time(
             self.tb2_in_radar_prv, self.tb2_in_radar, self.tb2_radar_time
@@ -453,18 +477,19 @@ class FormationFlightGame:
             self.KIZILELMA_POS[0], self.KIZILELMA_POS[1], self.MOUNTAINS
         )
 
-        # self.annotate(
-        #     self.tb2_in_radar,
-        #     self.akinci_in_radar,
-        #     self.kizilelma_in_radar,
-        #     self.tb2_radar_time_new,
-        #     self.akinci_radar_time_new,
-        #     self.kizilelma_radar_time_new,
-        #     self.tb2_mountain_collide,
-        #     self.akinci_mountain_collide,
-        #     self.kizilelma_mountain_collide,
-        # )
-        # pygame.display.flip()
+        if self.render:
+            self.annotate(
+                self.tb2_in_radar,
+                self.akinci_in_radar,
+                self.kizilelma_in_radar,
+                self.tb2_radar_time_new,
+                self.akinci_radar_time_new,
+                self.kizilelma_radar_time_new,
+                self.tb2_mountain_collide,
+                self.akinci_mountain_collide,
+                self.kizilelma_mountain_collide,
+            )
+            pygame.display.flip()
         self.clock.tick(30)
 
         self.ALLY_POS_PRV = [
@@ -476,17 +501,3 @@ class FormationFlightGame:
         self.tb2_in_radar_prv = self.tb2_radar_time_new
         self.akinci_in_radar_prv = self.akinci_radar_time_new
         self.kizilelma_in_radar_prv = self.kizilelma_radar_time_new
-
-
-if __name__ == "__main__":
-    game = FormationFlightGame()
-    game.init()
-
-    i = 0
-    while True:
-        if i == 100:
-            game.init()
-            i = 0
-
-        game.game_step()
-        i += 1

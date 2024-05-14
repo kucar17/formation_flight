@@ -7,13 +7,14 @@ import torch.nn.functional as F
 
 def hidden_init(layer):
     fan_in = layer.weight.data.size()[0]
-    lim = 1. / np.sqrt(fan_in)
+    lim = 1.0 / np.sqrt(fan_in)
     return (-lim, lim)
+
 
 class Actor(nn.Module):
     """Actor (Policy) Model."""
 
-    def __init__(self, state_size, action_size, hidden_size=32):
+    def __init__(self, state_size, action_size, hidden_size=128):
         """Initialize parameters and build model.
         Params
         ======
@@ -27,53 +28,50 @@ class Actor(nn.Module):
 
         self.fc1 = nn.Linear(state_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
-        self.mean_fc = nn.Linear(hidden_size, action_size)
-        self.log_variance_fc = nn.Linear(hidden_size, action_size)
-
-        self.softmax = nn.Softmax(dim=-1)
+        # Output logits for each of the 3 possible actions in each of the 6 dimensions
+        self.action_head = nn.Linear(hidden_size, action_size * 3)
 
     def forward(self, state):
-
         x = F.relu(self.fc1(state))
         x = F.relu(self.fc2(x))
-        mean = self.mean_fc(x)
-        log_variance = self.log_variance_fc(x)
-        log_variance = torch.clamp(log_variance, -20, 2)
-        return mean, log_variance
+        action_logits = self.action_head(x)
+        # Reshape logits to (batch_size, action_size, 3)
+        return action_logits.view(-1, 6, 3)
 
     def evaluate(self, state, epsilon=1e-6):
-        action_probs = self.forward(state)
-
-        dist = Categorical(action_probs)
-        action = dist.sample().to(state.device)
-        # Have to deal with situation of 0.0 probabilities because we can't do log 0
-        z = action_probs == 0.0
-        z = z.float() * 1e-8
-        log_action_probabilities = torch.log(action_probs + z)
-        return action.detach().cpu(), action_probs, log_action_probabilities        
+        action_logits = self.forward(state)
+        dists = [Categorical(logits=logits) for logits in action_logits.transpose(0, 1)]
+        actions = torch.stack([dist.sample() for dist in dists], dim=1)
+        log_probs = torch.stack(
+            [dist.log_prob(action) for dist, action in zip(dists, actions.T)], dim=1
+        )
+        return actions, log_probs.sum(dim=1)  # Sum log probabilities across actions
 
     def get_action(self, state):
         """
         returns the action based on a squashed gaussian policy. That means the samples are obtained according to:
         a(s,e)= tanh(mu(s)+sigma(s)+e)
         """
-        action_probs = self.forward(state)
-
-        dist = Categorical(action_probs)
-        action = dist.sample().to(state.device)
-        # Have to deal with situation of 0.0 probabilities because we can't do log 0
-        z = action_probs == 0.0
-        z = z.float() * 1e-8
-        log_action_probabilities = torch.log(action_probs + z)
-        return action.detach().cpu(), action_probs, log_action_probabilities
+        action_logits = self.forward(state)
+        # Softmax to convert logits to probabilities
+        action_probs = F.softmax(action_logits, dim=-1)
+        # Sampling from the distribution
+        actions = torch.multinomial(action_probs, num_samples=1, replacement=True)
+        # Subtract 1 to map [0, 1, 2] to [-1, 0, 1]
+        actions = actions.squeeze(-1) - 1
+        return actions
 
     def get_det_action(self, state):
-        mean, log_variance = self.forward(state)
-        variance = log_variance.exp()
-        gaussian = Normal(mean, variance)        
-        z = gaussian.sample()
-        actions = torch.tanh(z)
-        return actions
+        with torch.no_grad():
+            action_logits = self.forward(state)
+            # print("Action logits:", action_logits)
+            action_probs = F.softmax(action_logits, dim=-1)  # Convert logits to probabilities
+            # print("Action probabilities:", action_probs)
+            action_indices = torch.argmax(action_probs, dim=-1)  # Highest probability index
+            # print("Action indices before mapping:", action_indices)
+            actions = action_indices - 1  # Map indices: [0, 1, 2] -> [-1, 0, 1]
+            # print("Actions after mapping:", actions)
+        return actions.cpu().numpy()
 
 
 class Critic(nn.Module):
@@ -89,19 +87,28 @@ class Critic(nn.Module):
             hidden_size (int): Number of nodes in the network layers
         """
         super(Critic, self).__init__()
-        self.seed = torch.manual_seed(seed)
-        self.fc1 = nn.Linear(state_size, hidden_size)
+        self.fc1 = nn.Linear(
+            state_size + action_size, hidden_size
+        )  # action_size added to state_size
         self.fc2 = nn.Linear(hidden_size, hidden_size)
-        self.fc3 = nn.Linear(hidden_size, action_size)
-        self.reset_parameters()
+        self.q_out = nn.Linear(
+            hidden_size, 1
+        )  # Output one Q-value for the given state-action pair
 
     def reset_parameters(self):
         self.fc1.weight.data.uniform_(*hidden_init(self.fc1))
         self.fc2.weight.data.uniform_(*hidden_init(self.fc2))
         self.fc3.weight.data.uniform_(-3e-3, 3e-3)
 
-    def forward(self, state):
+    def forward(self, state, action):
         """Build a critic (value) network that maps (state, action) pairs -> Q-values."""
-        x = F.relu(self.fc1(state))
+        # Ensure action is in the correct shape [batch_size, action_size]
+        if action.dim() == 1:
+            action = action.squeeze(-1)  # Adds a dimension at the end if it's 1D
+
+        # Now let's concatenate along dimension 1 (features dimension)
+        x = torch.cat((state, action), dim=1)
+        x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        return self.fc3(x)
+        q_value = self.q_out(x)
+        return q_value

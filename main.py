@@ -2,11 +2,9 @@ from formation_flight_env import FormationFlightEnv
 import pygame
 import sys
 import time
-import os
-from ray.rllib.algorithms.sac import SACConfig
 
 EPISODE = 100
-STEP = 1000
+STEP = 1500
 
 env = FormationFlightEnv()
 
@@ -15,16 +13,14 @@ for i in range(EPISODE):
     total_episode_reward = 0
 
     for i in range(STEP):
-        # for event in pygame.event.get():
-        #     if event.type == pygame.QUIT:
-        #         pygame.quit()
-        #         sys.exit()
-        pygame.display.quit()
-        pygame.quit()
+        env.render()
 
-        action = [1, 1, 0, 1, 1, 0]  # TODO: RL AGENT WILL BE ADDED HERE
-
-        next_obs, reward, done, _ = env.step(action)
+        action = [0, 1, 0, 1, 0, 1]
+        action2 = [1, 0, 1, 0, 1, 0]
+        if i >= 500:
+            next_obs, reward, done, _ = env.step(action2)
+        else:
+            next_obs, reward, done, _ = env.step(action)
         total_episode_reward += reward
         print(reward)
         if done:
