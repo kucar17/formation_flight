@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from torch.distributions import Categorical, Bernoulli
+from torch.distributions import Categorical, Bernoulli, Normal
 import numpy as np
 import torch.nn.functional as F
 
@@ -24,19 +24,23 @@ class Actor(nn.Module):
             fc2_units (int): Number of nodes in second hidden layer
         """
         super(Actor, self).__init__()
-        
+
         self.fc1 = nn.Linear(state_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
-        self.fc3 = nn.Linear(hidden_size, action_size)
+        self.mean_fc = nn.Linear(hidden_size, action_size)
+        self.log_variance_fc = nn.Linear(hidden_size, action_size)
+
         self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, state):
 
         x = F.relu(self.fc1(state))
         x = F.relu(self.fc2(x))
-        action_probs = self.softmax(self.fc3(x))
-        return action_probs
-    
+        mean = self.mean_fc(x)
+        log_variance = self.log_variance_fc(x)
+        log_variance = torch.clamp(log_variance, -20, 2)
+        return mean, log_variance
+
     def evaluate(self, state, epsilon=1e-6):
         action_probs = self.forward(state)
 
@@ -47,7 +51,7 @@ class Actor(nn.Module):
         z = z.float() * 1e-8
         log_action_probabilities = torch.log(action_probs + z)
         return action.detach().cpu(), action_probs, log_action_probabilities        
-    
+
     def get_action(self, state):
         """
         returns the action based on a squashed gaussian policy. That means the samples are obtained according to:
@@ -62,12 +66,14 @@ class Actor(nn.Module):
         z = z.float() * 1e-8
         log_action_probabilities = torch.log(action_probs + z)
         return action.detach().cpu(), action_probs, log_action_probabilities
-    
+
     def get_det_action(self, state):
-        action_probs = self.forward(state)
-        dist = Bernoulli(action_probs)
-        action = dist.sample().to(state.device)
-        return action.detach().cpu()
+        mean, log_variance = self.forward(state)
+        variance = log_variance.exp()
+        gaussian = Normal(mean, variance)        
+        z = gaussian.sample()
+        actions = torch.tanh(z)
+        return actions
 
 
 class Critic(nn.Module):

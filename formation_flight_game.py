@@ -84,7 +84,7 @@ class FormationFlightGame:
             {"type": self.AKINCI, "angle": 240, "speed": 0.5},
         ]
 
-        self.enemy_aircraft_image = pygame.image.load("aircraft.png")
+        self.enemy_aircraft_image = pygame.image.load("resources/aircraft.png")
         self.enemy_aircraft_image = pygame.transform.scale(
             self.enemy_aircraft_image, (30, 30)
         )
@@ -92,13 +92,13 @@ class FormationFlightGame:
             self.enemy_aircraft_image, 90
         )
 
-        tb2 = pygame.image.load("tb2.png")
+        tb2 = pygame.image.load("resources/tb2.png")
         tb2 = pygame.transform.scale(tb2, (65, 65))
 
-        akinci = pygame.image.load("akinci.png")
+        akinci = pygame.image.load("resources/akinci.png")
         akinci = pygame.transform.scale(akinci, (50, 50))
 
-        kizilelma = pygame.image.load("kizilelma.png")
+        kizilelma = pygame.image.load("resources/kizilelma.png")
         kizilelma = pygame.transform.scale(kizilelma, (50, 50))
         kizilelma = pygame.transform.rotate(kizilelma, 45)
 
@@ -260,17 +260,17 @@ class FormationFlightGame:
             grid_y = state[index][1]
             # Draw aircraft as a small rectangle for now
             if aircraft["type"] is self.AKINCI:
-                akinci = pygame.image.load("akinci.png")
+                akinci = pygame.image.load("resources/akinci.png")
                 akinci = pygame.transform.scale(akinci, (50, 50))
                 akinci = pygame.transform.rotate(akinci, state[index][2] - 45)
                 self.screen.blit(akinci, (grid_x, grid_y))
             elif aircraft["type"] is self.TB2:
-                tb2 = pygame.image.load("tb2.png")
+                tb2 = pygame.image.load("resources/tb2.png")
                 tb2 = pygame.transform.scale(tb2, (60, 60))
                 tb2 = pygame.transform.rotate(tb2, state[index][2])
                 self.screen.blit(tb2, (grid_x, grid_y))
             else:
-                kizilelma = pygame.image.load("kizilelma.png")
+                kizilelma = pygame.image.load("resources/kizilelma.png")
                 kizilelma = pygame.transform.scale(kizilelma, (50, 50))
                 kizilelma = pygame.transform.rotate(kizilelma, state[index][2])
                 self.screen.blit(kizilelma, (grid_x, grid_y))

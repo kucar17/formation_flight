@@ -69,7 +69,7 @@ class SAC(nn.Module):
         
         with torch.no_grad():
             action = self.actor_local.get_det_action(state)
-        return action.numpy()
+        return action.round().numpy()
 
     def calc_policy_loss(self, states, alpha):
         _, action_probs, log_pis = self.actor_local.evaluate(states)
